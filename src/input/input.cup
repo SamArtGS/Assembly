@@ -1,0 +1,49 @@
+package input;
+
+import java.io.*;
+import java.util.*;
+import java_cup.runtime.*;
+
+action code
+{:
+    
+    
+:};
+
+parser code
+{:
+
+    public static String fileName = null;
+    public static String LstName = null;
+    public static String HexName = null;
+    public void syntax_error(Symbol s) {
+        System.err.println("Sintax error '" + s.value + "' line: "+ (s.left + 1) + ", column: " + (s.right + 1));
+    }
+
+    public void unrecovered_syntax_error(Symbol s) throws java.lang.Exception {
+        System.err.println("Sintax error '" + s.value + "' line: "+ (s.left + 1) + ", column: " + (s.right + 1));
+    }
+
+:};
+
+
+terminal String z80, file, nombre, H, L; 
+non terminal s, inicial;
+start with s;
+
+s::= inicial
+;
+inicial::= z80 file:f {: fileName = f; HexName = f.substring(0, f.length() -4); :}
+    | z80 file:f L nombre:l {: fileName = f; HexName = f.substring(0, f.length() -4); LstName = l; :}
+    | z80 file:f L {: fileName = f; HexName = f.substring(0, f.length() -4); LstName = f.substring(0, f.length() -4); :}
+    | z80 file:f H {: fileName = f; HexName = f.substring(0, f.length() -4); :}
+    | z80 file:f H L {: fileName = f; HexName = f.substring(0, f.length() -4); LstName = f.substring(0, f.length() -4); :}
+    | z80 file:f L H {: fileName = f; HexName = f.substring(0, f.length() -4); LstName = f.substring(0, f.length() -4); :}
+    | z80 file:f H nombre:h {: fileName = f; HexName =h; LstName = f.substring(0, f.length() -4); :}
+    | z80 file:f H nombre:h L {: fileName = f; HexName = h; LstName = f.substring(0, f.length() -4); :}
+    | z80 file:f H L nombre:l {: fileName = f; HexName = f.substring(0, f.length() -4); LstName = l; :}
+    | z80 file:f L H nombre:h {: fileName = f; HexName = h; LstName = f.substring(0, f.length() -4); :}
+    | z80 file:f L nombre:l H {: fileName = f; HexName = f.substring(0, f.length() -4); LstName = l; :}
+    | z80 file:f L nombre:l H nombre:h {: fileName = f; HexName = h;LstName = l; :}
+    | z80 file:f H nombre:h L nombre:l {: fileName = f; HexName = h;LstName = l; :}
+;

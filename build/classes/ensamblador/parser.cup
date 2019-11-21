@@ -1,0 +1,786 @@
+package ensamblador;
+
+import java.io.*;
+import java.util.*;
+import java_cup.runtime.*;
+import java.math.BigInteger;
+
+action code
+{:
+    boolean error = false;
+    Map<String, Etiquetas> table = new Hashtable<>();
+    LinkedList<Codigo> codigo = new LinkedList<Codigo>();
+    String check = "";
+    Codigo act;
+    int dirC = 0;
+    int CL = 0;
+
+    public Codigo insertCode(String cod){
+        Codigo codOb = new Codigo(String.format("%04X", CL), cod);
+        codigo.addLast(codOb);
+        act = codOb;
+        return codOb;
+    }
+    
+    public Codigo insertCode(String cod, String jump){
+        Codigo codOb = new Codigo(String.format("%04X", CL), cod, jump);
+        codigo.addLast(codOb);
+        act = codOb;
+        return codOb;
+    }
+    
+    public void resolver(String e){
+        ArrayList<Codigo> tmp = table.get(e).llamadas;
+        int dir = table.get(e).direccion;
+        for (Codigo cod : tmp){
+            String str;
+            if(cod.tipo == "JR")
+                str = String.format("%02X", dir - (Integer.parseInt(cod.dir, 16) + 2));
+            else {
+                str = String.format("%04X", dir);
+                str = getNum16Bits(str);
+            }
+            if(str.length() == 8)
+                str = str.substring(6);
+            cod.codigo += str;
+        }
+        table.get(e).llamadas.clear();
+    }
+
+    public void validarEti(String e, String code, String jump){
+        String dir;
+        if(table.containsKey(e)){
+            if(table.get(e).definicion){
+                if(jump.equals("JR")){
+                    dir = String.format("%02X", table.get(e).direccion - (CL+2));
+                    if(dir.length() == 8)
+                        dir = dir.substring(6);
+                }
+                else{
+                    dir = String.format("%04X", table.get(e).direccion);
+                    dir = getNum16Bits(dir);
+                }
+                insertCode(code + dir);
+            }
+            else{
+                table.get(e).llamadas.add(insertCode(code, jump));
+            }
+        }
+        else{
+            table.put(e, new Etiquetas(false));
+            table.get(e).llamadas.add(insertCode(code, jump));
+        }
+    }
+
+    public String getRegistro(String reg){
+        switch(reg.toUpperCase()){
+            case "B":
+                return "000";
+            case "C":
+                return "001";
+            case "D":
+                return "010";
+            case "E":
+                return "011";
+            case "H":
+                return "100";
+            case "L":
+                return "101";
+            case "A":
+                return "111";
+        }
+        return null;
+    }
+
+    public String getRegistro2Bits(String reg){
+        switch(reg.toUpperCase()){
+            case "BC":
+                return "00";
+            case "DE":
+                return "01";
+            case "HL":
+                return "10";
+            case "SP":
+                return "11";
+            case "IX":
+                return "10";
+            case "IY":
+                return "10";
+        }
+        return null;
+    }
+
+    public String getCondition(String reg){
+        switch(reg.toUpperCase()){
+            case "NZ":
+                return "000";
+            case "Z":
+                return "001";
+            case "NC":
+                return "010";
+            case "C":
+                return "011";
+            case "PO":
+                return "100";
+            case "PE":
+                return "101";
+            case "P":
+                return "110";
+            case "M":
+                return "111";
+        }
+        return null;
+    }
+
+    public String getP(String reg){
+        switch(reg.toUpperCase()){
+            case "00":
+                return "000";
+            case "08":
+                return "001";
+            case "10":
+                return "010";
+            case "18":
+                return "011";
+            case "20":
+                return "100";
+            case "28":
+                return "101";
+            case "30":
+                return "110";
+            case "38":
+                return "111";
+        }
+        return null;
+    }
+
+    public String getBit(String reg){
+        switch(reg.toUpperCase()){
+            case "0":
+                return "000";
+            case "1":
+                return "001";
+            case "2":
+                return "010";
+            case "3":
+                return "011";
+            case "4":
+                return "100";
+            case "5":
+                return "101";
+            case "6":
+                return "110";
+            case "7":
+                return "111";
+        }
+        return null;
+    }
+
+    public String binToHex(String bin){
+        int i, c = 0;
+        int k = 0;
+        for (i = bin.length() - 1; i != -1; i--){
+            if(bin.charAt(i) == '1'){
+                c += Math.pow(2, k);
+            }
+            k++;
+        }
+        return String.valueOf(String.format("%02X", c));
+    }
+
+    public String getNum8Bits(String n){
+        int value = Integer.parseInt(n, 16); 
+        return String.valueOf(String.format("%02X", value));
+    };
+    
+    public String getNum16Bits(String n){
+        BigInteger value = new BigInteger(n, 16);
+        String nn = String.format("%04X", value);
+        return (nn.substring(2,4) + nn.substring(0,2));
+    };
+
+    public void loadLstFile(){
+        try{
+            FileWriter fichero = null;
+            PrintWriter pw = null;
+            fichero = new FileWriter(lst + ".lst");
+            pw = new PrintWriter(fichero);
+            Iterator<Codigo> it = codigo.iterator();
+            while (it.hasNext())
+                pw.println(it.next());
+            fichero.close();
+        }catch(Exception e){}
+    }
+
+    public void loadHexFile(){
+        try{
+            FileWriter fichero = null;
+            PrintWriter pw = null;
+            fichero = new FileWriter(hex + ".hex");
+            pw = new PrintWriter(fichero);
+            int nbytes = (CL - dirC);
+            int nl = nbytes / 16 + 1;
+            Iterator<Codigo> it = codigo.iterator();
+            String co = "", ini;
+            int n = 0;
+            while(nl != 0){
+                if(nl == 1)
+                    ini = String.format("%02X", nbytes%16);
+                else 
+                    ini = "10";
+                check = ini + String.format("%04X", dirC + 16*n) + "00";
+                pw.print(":" + ini + String.format("%04X", dirC + 16*n++) + "00");
+                int i = 0, j = 0;
+                while (i < 16){
+                    if(co.length() == 0)
+                        if(it.hasNext())
+                            co = it.next().LstToString();
+                        else
+                            break;
+                    j = co.length()/2;
+                    if((i+j) > 16){
+                        int k = 16 - i;
+                        String aux = co.substring(0, 2*k);
+                        co = co.substring(2*k);
+                        pw.print(aux);
+                        check += aux;
+                        i += k;
+                    }
+                    else{
+                        pw.print(co);
+                        check += co;
+                        i += j;
+                        co = "";
+                    }
+                }
+                pw.print(compA2());
+                pw.println("");
+                nl--;
+            }
+            pw.print(":00000001FF");
+            pw.println("");
+            fichero.close();
+        }catch(Exception e){
+            System.out.println(e);
+        }
+    }
+
+    public String compA2(){
+        Integer sum = 0;
+        String db = "";
+        for (int n = 0; n <check.length(); n++){
+            db += check.charAt(n);
+            if(n%2 == 1){
+                sum += Integer.parseInt((db + ""), 16);
+                db = "";
+            }
+        }
+        String bin = Integer.toBinaryString(sum);
+        String a2 = "";
+        boolean first = false;
+        for (int i = bin.length() -1; i >=0; i--){
+            if(first){
+                if (bin.charAt(i) == '1')
+                    a2 = "0" + a2;
+                else 
+                    a2 = "1" + a2;
+            }
+            else if(bin.charAt(i) == '1'){
+                first = true;
+                a2 = bin.charAt(i) + a2;
+            }
+            else 
+                a2 = bin.charAt(i) + a2;
+        }
+        if(a2.length() > 8)
+            a2 = a2.substring(a2.length() - 8);
+        check = "";
+        return binToHex(a2);
+    }  
+
+:};
+
+parser code
+{:
+
+    static String linea = new String();
+    static String hex;
+    static String lst;
+    
+    public void cargar(String archivo, String hex, String lst) throws Exception{
+        this.lst = lst;
+        this.hex = hex;
+        new parser(new Yylex(new FileReader(archivo))).parse();
+    }
+    
+    public void syntax_error(Symbol s) {
+        System.err.println("Sintax error '" + s.value + "' line: "+ (s.left + 1) + ", column: " + (s.right + 1));
+    }
+
+    public void unrecovered_syntax_error(Symbol s) throws java.lang.Exception {
+        System.err.println("Sintax error '" + s.value + "' line: "+ (s.left + 1) + ", column: " + (s.right + 1));
+    }
+:};
+terminal String N, NN, LPAR, RPAR, COMA, MAS, DOS, JP, JR, DJ, LD, HL, IX, IY, 
+BC, DE, I, R, A, REG, COM, ETI, SL, NZ, Z, NC, C, PO, PE, P, M, ADD, ADC, SUB,
+SBC, AND, OR, XOR, CP, INC, DEC, BIT, SET, RES, B, PH, CALL, RET, RETI, RETN, RST,
+DAA, CPL, NEG, CCF, SCF, NOP, HALT, DI, EI, IM0, IM1, IM2, EX, EXX, FX, LDI, LDIR, 
+LDD, LDDR, CPI, CPIR, CPD, CPDR, AF, SP, IN, INI, INIR, IND, INDR, OUT, OUTI, OTIR,
+OUTD, OTDR, RLCA, RLA, RRCA, RRA, RLC, RL, RRC, RR, SLA, SRA, SRL, RLD, RRD, PUSH, POP,
+ORG;
+non terminal inicial, s, com, t, eti, ld, ld1, jp, jr, dj, reg, add, adc, sub,
+sbc, and, or, xor, cp, inc, dec, bit, set, res, call, ret, reti, retn, rst,
+daa, cpl, neg, ccf, scf, nop, halt, di, ei, im0, im1, im2, ex, exx, fx, ldi, ldir,
+ldd, lddr, cpi, cpir, cpd, cpdr, in, ini, inir, ind, indr, out, outi, otir, 
+outd, otdr, rlca, rla, rrca, rra, rlc, rl, rrc, rr, sla, sra, srl, rld, rrd, push, pop,
+ii;
+non terminal String cond, n, nn, ss;
+start with inicial;
+
+inicial::= ii
+    | ORG NN:e {: linea = ""; :} SL {: CL = new BigInteger(e, 16).intValue(); dirC = CL; :} ii 
+;
+ii::= s 
+        {:
+            for (Map.Entry<String, Etiquetas> eti : table.entrySet())
+                if(eti.getValue().llamadas.size() != 0){
+                    System.err.println("Semantic error: " + eti.getKey() + " no definida");
+                    error = true;
+                }
+            if(!error){
+                if(hex != null)
+                    loadHexFile();
+                if(lst != null)
+                    loadLstFile();
+                System.out.println("Successful Assembly");
+            }
+        :}
+;
+s::= eti t com {: act.linea = linea; linea = ""; :} SL s
+    | eti t com {: act.linea = linea; linea = ""; :}
+    | error {: linea = ""; :} SL s
+    | error {: linea = ""; :}
+;
+eti::= ETI:e DOS 
+{:
+    if(table.containsKey(e)){
+        if(table.get(e).definicion){
+            System.err.println("Semantic error: " + e + " ya fue definida");
+            error = true;
+        }
+        else{
+            table.get(e).definicion = true;
+            table.get(e).direccion = CL;
+            resolver(e);
+        }
+    }
+    else
+        table.put(e, new Etiquetas(CL, true));
+:}
+    |
+;
+
+t::= LD ld
+    | JP jp
+    | JR jr
+    | DJ dj
+    | ADD add
+    | ADC adc
+    | SUB sub
+    | SBC sbc
+    | AND and
+    | OR or 
+    | XOR xor
+    | CP cp
+    | INC inc
+    | DEC dec
+    | BIT bit
+    | SET set
+    | RES res
+    | CALL call
+    | RET ret
+    | RETI reti
+    | RETN retn
+    | RST rst
+    | DAA daa
+    | CPL cpl
+    | NEG neg
+    | CCF ccf
+    | SCF scf
+    | NOP nop
+    | HALT halt
+    | DI di
+    | EI ei
+    | IM0 im0
+    | IM1 im1
+    | IM2 im2
+    | EX ex
+    | EXX exx
+    | FX fx
+    | LDI ldi
+    | LDIR ldir
+    | LDD ldd
+    | LDDR lddr
+    | CPI cpi
+    | CPIR cpir
+    | CPD cpd
+    | CPDR cpdr
+    | IN in
+    | INI ini
+    | INIR inir
+    | IND ind 
+    | INDR indr
+    | OUT out
+    | OUTI outi
+    | OTIR otir
+    | OUTD outd
+    | OTDR otdr
+    | RLCA rlca
+    | RLA rla
+    | RRCA rrca
+    | RRA rra
+    | RLC rlc
+    | RL rl
+    | RRC rrc
+    | RR rr
+    | SLA sla
+    | SRA sra
+    | SRL srl
+    | RLD rld
+    | RRD rrd
+    | PUSH push
+    | POP pop
+;
+com::= COM
+    |
+;
+n::= N:e {: RESULT = e; :}
+    | B:e {: RESULT = e; :}
+;
+nn::= NN:e {: RESULT = e; :}
+    | PH:e {: RESULT = e; :}
+;
+ld::= reg:e1 COMA ld1:e2 {: insertCode(binToHex("01" + e1 + e2)); CL += 1;:}
+    | A:e1 COMA ld1:e2 {: insertCode(binToHex("01" + getRegistro(e1) + e2)); CL += 1;:}
+    | reg:e1 COMA n:e2 {: insertCode(binToHex("00" + e1 + "110") + getNum8Bits(e2)); CL += 2;:}
+    | A:e1 COMA n:e2 {: insertCode(binToHex("00" + getRegistro(e1) + "110") + getNum8Bits(e2)); CL += 2;:}
+    | reg:e COMA LPAR HL RPAR {: insertCode(binToHex("01" + e + "110")); CL += 1;:}
+    | A:e COMA LPAR HL RPAR {: insertCode(binToHex("01" + getRegistro(e) + "110")); CL += 1;:}
+    | reg:e1 COMA LPAR IX MAS n:e2 RPAR {: insertCode(binToHex("11011101") + binToHex("01" + e1 + "110") + getNum8Bits(e2)); CL += 3;:}
+    | A:e1 COMA LPAR IX MAS n:e2 RPAR {: insertCode(binToHex("11011101") + binToHex("01" + e1 + "110") + getNum8Bits(e2)); CL += 3;:}
+    | reg:e1 COMA LPAR IY MAS n:e2 RPAR {: insertCode(binToHex("11111101") + binToHex("01" + e1 + "110") + getNum8Bits(e2)); CL += 3;:}
+    | A:e1 COMA LPAR IY MAS n:e2 RPAR {: insertCode(binToHex("11111101") + binToHex("01" + e1 + "110") + getNum8Bits(e2)); CL += 3;:}
+    | LPAR HL RPAR COMA ld1:e {: insertCode(binToHex("01110" + e)); CL += 1;:}
+    | LPAR IX MAS n:e1 RPAR COMA ld1:e2 {: insertCode(binToHex("11011101") + binToHex("01110" + e2) + getNum8Bits(e1)); CL += 3;:}
+    | LPAR IY MAS n:e1 RPAR COMA ld1:e2 {: insertCode(binToHex("11111101") + binToHex("01110" + e2) + getNum8Bits(e1)); CL += 3;:}
+    | LPAR HL RPAR COMA n:e {: insertCode(binToHex("00110110") + getNum8Bits(e)); CL += 2;:}
+    | LPAR IX MAS n:e1 RPAR COMA n:e2 {: insertCode(binToHex("11011101") + binToHex("00110110") + getNum8Bits(e1) + getNum8Bits(e2)); CL += 4;:}
+    | LPAR IY MAS n:e1 RPAR COMA n:e2 {: insertCode(binToHex("11111101") + binToHex("00110110") + getNum8Bits(e1) + getNum8Bits(e2)); CL += 4;:}
+    | A COMA LPAR BC RPAR {: insertCode(binToHex("00001010")); CL +=1; :}
+    | A COMA LPAR DE RPAR {: insertCode(binToHex("00011010")); CL +=1; :}
+    | A COMA LPAR nn:e RPAR {: insertCode(binToHex("00111010") + getNum16Bits(e)); CL +=3; :}
+    | LPAR BC RPAR COMA A {: insertCode(binToHex("00001010")); CL +=1; :}
+    | LPAR DE RPAR COMA A {: insertCode(binToHex("00001010")); CL +=1; :}
+    | LPAR nn:e RPAR COMA A {: insertCode(binToHex("00110010") + getNum16Bits(e)); CL +=3; :}
+    | A COMA I {: insertCode(binToHex("11101101") + binToHex("01010111")); CL +=2; :}
+    | A COMA R {: insertCode(binToHex("11101101") + binToHex("01011111")); CL +=2; :}
+    | I COMA A {: insertCode(binToHex("11101101") + binToHex("01000111")); CL +=2; :}
+    | R COMA A {: insertCode(binToHex("11101101") + binToHex("01001111")); CL +=2; :}
+;
+ld1::= reg:e {: RESULT = e; :}
+    | A:e {: RESULT = getRegistro(e); :}
+;
+reg::= REG:e {: RESULT = getRegistro(e); :}
+    | C:e {: RESULT = getRegistro(e); :}
+;
+jp::= ETI:e {: validarEti(e, binToHex("11000011"), "JP"); CL += 3; :} 
+    | cond:e1 COMA ETI:e {: validarEti(e, binToHex("11" + e1 + "011"), "JP"); CL += 3; :} 
+    | LPAR HL RPAR {: insertCode(binToHex("11101001")); CL += 1; :}
+    | LPAR IX RPAR {: insertCode(binToHex("11011101") + binToHex("11101001")); CL += 2; :}
+    | LPAR IY RPAR {: insertCode(binToHex("11111101") + binToHex("11101001")); CL += 2; :}
+;
+cond::= NZ:e {: RESULT = getCondition(e); :}
+    | Z:e  {: RESULT = getCondition(e); :}
+    | NC:e  {: RESULT = getCondition(e); :}
+    | C:e  {: RESULT = getCondition(e); :}
+    | PO:e  {: RESULT = getCondition(e); :}
+    | PE:e  {: RESULT = getCondition(e); :}
+    | P:e  {: RESULT = getCondition(e); :}
+    | M:e  {: RESULT = getCondition(e); :}
+;
+jr::= ETI:e {: validarEti(e, binToHex("00011000"), "JR");CL += 2; :}
+    | C COMA ETI:e {: validarEti(e, binToHex("00111000"), "JR");CL += 2; :}
+    | NC COMA ETI:e {: validarEti(e, binToHex("00110000"), "JR");CL += 2; :}
+    | Z COMA ETI:e {: validarEti(e, binToHex("00101000"), "JR");CL += 2; :}
+    | NZ COMA ETI:e {: validarEti(e, binToHex("00100000"), "JR");CL += 2; :}
+;
+dj::= NZ COMA ETI:e {: validarEti(e, binToHex("00010000"), "JR");CL += 2; :}
+;
+add::= A COMA ld1:e {: insertCode(binToHex("10000" + e)); CL += 1;:}
+    | A COMA n:e {: insertCode(binToHex("11000110") + getNum8Bits(e)); CL += 2;:}
+    | A COMA LPAR HL RPAR {: insertCode(binToHex("10000110")); CL += 1;:}
+    | A COMA LPAR IX MAS n:e RPAR {: insertCode(binToHex("11011101") + binToHex("10000110") + getNum8Bits(e)); CL += 3;:}
+    | A COMA LPAR IY MAS n:e RPAR {: insertCode(binToHex("11111101") + binToHex("10000110") + getNum8Bits(e)); CL += 3;:}
+;
+adc::= A COMA ld1:e {: insertCode(binToHex("10001" + e)); CL += 1;:}
+    | A COMA n:e {: insertCode(binToHex("11001110") + getNum8Bits(e)); CL += 2;:}
+    | A COMA LPAR HL RPAR {: insertCode(binToHex("10001110")); CL += 1;:}
+    | A COMA LPAR IX MAS n:e RPAR {: insertCode(binToHex("11011101") + binToHex("10001110") + getNum8Bits(e)); CL += 3;:}
+    | A COMA LPAR IY MAS n:e RPAR {: insertCode(binToHex("11111101") + binToHex("10001110") + getNum8Bits(e)); CL += 3;:}
+;
+sub::= A COMA ld1:e {: insertCode(binToHex("10010" + e)); CL += 1;:}
+    | A COMA n:e {: insertCode(binToHex("11010110") + getNum8Bits(e)); CL += 2;:}
+    | A COMA LPAR HL RPAR {: insertCode(binToHex("10010110")); CL += 1;:}
+    | A COMA LPAR IX MAS n:e RPAR {: insertCode(binToHex("11011101") + binToHex("10010110") + getNum8Bits(e)); CL += 3;:}
+    | A COMA LPAR IY MAS n:e RPAR {: insertCode(binToHex("11111101") + binToHex("10010110") + getNum8Bits(e)); CL += 3;:}
+;
+sbc::= A COMA ld1:e {: insertCode(binToHex("10011" + e)); CL += 1;:}
+    | A COMA n:e {: insertCode(binToHex("11011110") + getNum8Bits(e)); CL += 2;:}
+    | A COMA LPAR HL RPAR {: insertCode(binToHex("10001110")); CL += 1;:}
+    | A COMA LPAR IX MAS n:e RPAR {: insertCode(binToHex("11011101") + binToHex("10011110") + getNum8Bits(e)); CL += 3;:}
+    | A COMA LPAR IY MAS n:e RPAR {: insertCode(binToHex("11111101") + binToHex("10011110") + getNum8Bits(e)); CL += 3;:}
+;
+and::= ld1:e {: insertCode(binToHex("10100" + e)); CL += 1;:}
+    | n:e {: insertCode(binToHex("11100110") + getNum8Bits(e)); CL += 2;:}
+    | LPAR HL RPAR {: insertCode(binToHex("10100110")); CL += 1;:}
+    | LPAR IX MAS n:e RPAR {: insertCode(binToHex("11011101") + binToHex("10100110") + getNum8Bits(e)); CL += 3;:}
+    | LPAR IY MAS n:e RPAR {: insertCode(binToHex("11111101") + binToHex("10100110") + getNum8Bits(e)); CL += 3;:}
+;
+or::= ld1:e {: insertCode(binToHex("10110" + e)); CL += 1;:}
+    | n:e {: insertCode(binToHex("11110110") + getNum8Bits(e)); CL += 2;:}
+    | LPAR HL RPAR {: insertCode(binToHex("10110110")); CL += 1;:}
+    | LPAR IX MAS n:e RPAR {: insertCode(binToHex("11011101") + binToHex("10110110") + getNum8Bits(e)); CL += 3;:}
+    | LPAR IY MAS n:e RPAR {: insertCode(binToHex("11111101") + binToHex("10110110") + getNum8Bits(e)); CL += 3;:}
+;
+xor::= ld1:e {: insertCode(binToHex("10101" + e)); CL += 1;:}
+    | n:e {: insertCode(binToHex("11101110") + getNum8Bits(e)); CL += 2;:}
+    | LPAR HL RPAR {: insertCode(binToHex("10101110")); CL += 1;:}
+    | LPAR IX MAS n:e RPAR {: insertCode(binToHex("11011101") + binToHex("10101110") + getNum8Bits(e)); CL += 3;:}
+    | LPAR IY MAS n:e RPAR {: insertCode(binToHex("11111101") + binToHex("10101110") + getNum8Bits(e)); CL += 3;:}
+;
+cp::= ld1:e {: insertCode(binToHex("10111" + e)); CL += 1;:}
+    | n:e {: insertCode(binToHex("11111110") + getNum8Bits(e)); CL += 2;:}
+    | LPAR HL RPAR {: insertCode(binToHex("10111110")); CL += 1;:}
+    | LPAR IX MAS n:e RPAR {: insertCode(binToHex("11011101") + binToHex("10111110") + getNum8Bits(e)); CL += 3;:}
+    | LPAR IY MAS n:e RPAR {: insertCode(binToHex("11111101") + binToHex("10111110") + getNum8Bits(e)); CL += 3;:}
+;
+inc::= ld1:e {: insertCode(binToHex("00" + e + "100")); :}
+    | LPAR HL RPAR {: insertCode(binToHex("00110100")); CL += 1;:}
+    | LPAR IX MAS n:e RPAR {: insertCode(binToHex("11011101") + binToHex("00110100") + getNum8Bits(e)); CL += 3;:}
+    | LPAR IY MAS n:e RPAR {: insertCode(binToHex("11111101") + binToHex("00110100") + getNum8Bits(e)); CL += 3;:}
+;
+dec::= ld1:e {: insertCode(binToHex("00" + e + "101")); CL+=1;:}
+    | LPAR HL RPAR {: insertCode(binToHex("00110101")); CL += 1;:}
+    | LPAR IX MAS n:e RPAR {: insertCode(binToHex("11011101") + binToHex("00110101") + getNum8Bits(e)); CL += 3;:}
+    | LPAR IY MAS n:e RPAR {: insertCode(binToHex("11111101") + binToHex("00110101") + getNum8Bits(e)); CL += 3;:}
+;
+bit::= B:e1 COMA ld1:e2 {: insertCode(binToHex("11001011") + binToHex("01" + getBit(e1) + e2)); CL += 2; :}
+    | B:e1 LPAR HL RPAR {: insertCode(binToHex("11001011") + binToHex("01" + getBit(e1) + "110")); CL += 2; :}
+    | B:e1 LPAR IX MAS n:e2 RPAR {: insertCode(binToHex("11011101") + binToHex("11001011") + getNum8Bits(e2) + binToHex("01" + getBit(e1) + "110")); CL += 4; :}
+    | B:e1 LPAR IY MAS n:e2 RPAR {: insertCode(binToHex("11111101") + binToHex("11001011") + getNum8Bits(e2) + binToHex("01" + getBit(e1) + "110")); CL += 4; :}
+;
+set::= B:e1 COMA ld1:e2 {: insertCode(binToHex("11001011") + binToHex("11" + getBit(e1) + e2)); CL += 2; :}
+    | B:e1 LPAR HL RPAR {: insertCode(binToHex("11001011") + binToHex("11" + getBit(e1) + "110")); CL += 2; :}
+    | B:e1 LPAR IX MAS n:e2 RPAR {: insertCode(binToHex("11011101") + binToHex("11001011") + getNum8Bits(e2) + binToHex("11" + getBit(e1) + "110")); CL += 4; :}
+    | B:e1 LPAR IY MAS n:e2 RPAR {: insertCode(binToHex("11111101") + binToHex("11001011") + getNum8Bits(e2) + binToHex("11" + getBit(e1) + "110")); CL += 4; :}
+;
+res::= B:e1 COMA ld1:e2 {: insertCode(binToHex("11001011") + binToHex("10" + getBit(e1) + e2)); CL += 2; :}
+    | B:e1 LPAR HL RPAR {: insertCode(binToHex("11001011") + binToHex("10" + getBit(e1) + "110")); CL += 2; :}
+    | B:e1 LPAR IX MAS n:e2 RPAR {: insertCode(binToHex("11011101") + binToHex("11001011") + getNum8Bits(e2) + binToHex("10" + getBit(e1) + "110")); CL += 4; :}
+    | B:e1 LPAR IY MAS n:e2 RPAR {: insertCode(binToHex("11111101") + binToHex("11001011") + getNum8Bits(e2) + binToHex("10" + getBit(e1) + "110")); CL += 4; :}
+;
+call::= ETI:e {: validarEti(e, binToHex("11001101"), "JP"); CL += 3; :} 
+    | cond:e1 COMA ETI:e {: validarEti(e, binToHex("11" + e1 + "100"), "JP"); CL += 3; :}  
+;
+ret::= {: insertCode(binToHex("11001001")); CL += 1; :}
+    | cond:e {: insertCode(binToHex("11" + e + "000")); CL += 1; :}
+;
+reti::= {: insertCode(binToHex("11101101") + binToHex("01001101")); CL += 2; :}
+;
+retn::= {: insertCode(binToHex("11101101") + binToHex("01000101")); CL += 2; :}
+;
+rst::= PH:e {: insertCode(binToHex("11" + getP(e) + "111")); CL += 1; :}
+;
+daa::= {: insertCode(binToHex("00100111")); CL += 1; :}
+;
+cpl::= {: insertCode(binToHex("00101111")); CL += 1; :}
+;
+neg::= {: insertCode(binToHex("11101101") + binToHex("01000100")); CL += 2; :}
+;
+ccf::= {: insertCode(binToHex("00111111")); CL += 1; :}
+;
+scf::= {: insertCode(binToHex("00110111")); CL += 1; :}
+;
+nop::= {: insertCode(binToHex("00000000")); CL += 1; :}
+;
+halt::= {: insertCode(binToHex("01110110")); CL += 1; :}
+;
+di::= {: insertCode(binToHex("11110011")); CL += 1; :}
+;
+ei::= {: insertCode(binToHex("11111011")); CL += 1; :}
+;
+im0::= {: insertCode(binToHex("11101101") + binToHex("01000110")); CL += 2; :}
+;
+im1::= {: insertCode(binToHex("11101101") + binToHex("01010110")); CL += 2; :}
+;
+im2::= {: insertCode(binToHex("11101101") + binToHex("01011110")); CL += 2; :}
+;
+ex::= DE COMA HL {: insertCode(binToHex("11101011")); CL += 1; :}
+    | AF COMA AF {: insertCode(binToHex("00001000")); CL += 1; :}
+    | LPAR SP RPAR COMA HL {: insertCode(binToHex("11100011")); CL += 1; :}
+    | LPAR SP RPAR COMA IX {: insertCode(binToHex("11011101") + binToHex("11100011")); CL += 2; :}
+    | LPAR SP RPAR COMA IY {: insertCode(binToHex("11111101") + binToHex("11100011")); CL += 2; :}
+;
+exx::= {: insertCode(binToHex("11011001")); CL += 1; :}
+;
+ldi::= {: insertCode(binToHex("11101101") + binToHex("10100000")); CL += 2; :}
+;
+ldir::= {: insertCode(binToHex("11101101") + binToHex("10110000")); CL += 2; :}
+;
+ldd::= {: insertCode(binToHex("11101101") + binToHex("10101000")); CL += 2; :}
+;
+lddr::= {: insertCode(binToHex("11101101") + binToHex("10111000")); CL += 2; :}
+;
+cpi::= {: insertCode(binToHex("11101101") + binToHex("10100001")); CL += 2; :}
+;
+cpir::= {: insertCode(binToHex("11101101") + binToHex("10110001")); CL += 2; :}
+;
+cpd::= {: insertCode(binToHex("11101101") + binToHex("10101001")); CL += 2; :}
+;
+cpdr::= {: insertCode(binToHex("11101101") + binToHex("10111001")); CL += 2; :}
+;
+in::= A COMA LPAR n:e RPAR {: insertCode(binToHex("11011011") + getNum8Bits(e)); CL += 2; :}
+    | reg:e COMA LPAR C RPAR {: insertCode(binToHex("11101101") + binToHex("01" + e + "000")); CL += 2; :}
+    | A:e COMA LPAR C RPAR {: insertCode(binToHex("11101101") + binToHex("01" + getRegistro(e) + "000")); CL += 2; :}
+;
+ini::= {: insertCode(binToHex("11101101") + binToHex("10100010")); CL += 2; :}
+;
+inir::= {: insertCode(binToHex("11101101") + binToHex("10110010")); CL += 2; :}
+;
+ind::= {: insertCode(binToHex("11101101") + binToHex("10101010")); CL += 2; :}
+;
+indr::= {: insertCode(binToHex("11101101") + binToHex("10111010")); CL += 2; :}
+;
+out::= LPAR n:e RPAR COMA A {: insertCode(binToHex("11010011") + getNum8Bits(e)); CL += 2; :}
+    | LPAR C RPAR COMA ld1:e {: insertCode(binToHex("11101101") + binToHex("01" + e + "001")); CL += 2; :}
+;
+outi::= {: insertCode(binToHex("11101101") + binToHex("10100011")); CL += 2; :}
+;
+otir::= {: insertCode(binToHex("11101101") + binToHex("10110011")); CL += 2; :}
+;
+outd::= {: insertCode(binToHex("11101101") + binToHex("10101011")); CL += 2; :}
+;
+otdr::= {: insertCode(binToHex("11101101") + binToHex("10111011")); CL += 2; :}
+;
+ss::= BC:e {: RESULT = getRegistro2Bits(e); :}
+    | DE:e {: RESULT = getRegistro2Bits(e); :}
+    | HL:e {: RESULT = getRegistro2Bits(e); :}
+    | SP:e {: RESULT = getRegistro2Bits(e); :}
+    | IX:e {: RESULT = getRegistro2Bits(e); :}
+    | IY:e {: RESULT = getRegistro2Bits(e); :}
+;
+add::= HL COMA ss:e {: insertCode(binToHex("00" + e + "1001")); CL += 1; :}
+    | IX COMA ss:e {: insertCode(binToHex("11011101") + binToHex("00" + e + "1001")); CL += 2; :}
+    | IY COMA ss:e {: insertCode(binToHex("11111101") + binToHex("00" + e + "1001")); CL += 2; :}
+;
+adc::= HL COMA ss:e {: insertCode(binToHex("11101101") + binToHex("01" + e + "1010")); CL += 2; :}
+;
+sbc::= HL COMA ss:e {: insertCode(binToHex("11101101") + binToHex("01" + e + "0010")); CL += 2; :}
+;
+inc::= BC:e {: insertCode(binToHex("00" + getRegistro2Bits(e) + "0011")); CL += 1; :}
+    | DE:e {: insertCode(binToHex("00" + getRegistro2Bits(e) + "0011")); CL += 1; :}
+    | HL:e {: insertCode(binToHex("00" + getRegistro2Bits(e) + "0011")); CL += 1; :}
+    | SP:e {: insertCode(binToHex("00" + getRegistro2Bits(e) + "0011")); CL += 1; :}
+    | IX {: insertCode(binToHex("11011101") + binToHex("00100011")); CL += 2; :}
+    | IY {: insertCode(binToHex("11111101") + binToHex("00100011")); CL += 2; :}
+;
+dec::= BC:e {: insertCode(binToHex("00" + getRegistro2Bits(e) + "1011")); CL += 1; :}
+    | DE:e {: insertCode(binToHex("00" + getRegistro2Bits(e) + "1011")); CL += 1; :}
+    | HL:e {: insertCode(binToHex("00" + getRegistro2Bits(e) + "1011")); CL += 1; :}
+    | SP:e {: insertCode(binToHex("00" + getRegistro2Bits(e) + "1011")); CL += 1; :}
+    | IX {: insertCode(binToHex("11011101") + binToHex("00101011")); CL += 2; :}
+    | IY {: insertCode(binToHex("11111101") + binToHex("00101011")); CL += 2; :}
+;
+rlca::= {: insertCode(binToHex("00000111")); CL += 1; :}
+;
+rla::= {: insertCode(binToHex("00010111")); CL += 1; :}
+;
+rrca::= {: insertCode(binToHex("00001111")); CL += 1; :}
+;
+rra::= {: insertCode(binToHex("00011111")); CL += 1; :}
+;
+rlc::= ld1:e {: insertCode(binToHex("11001011") + binToHex("00" + "000" + e)); CL += 2; :}
+    | LPAR HL RPAR {: insertCode(binToHex("11001011") + binToHex("00" + "000" + "110")); CL += 2; :}
+    | LPAR IX MAS N:e RPAR {: insertCode(binToHex("11011101") + binToHex("11001011") + getNum8Bits(e) +binToHex("00" + "000" + "110")); CL += 4; :}
+    | LPAR IY MAS N:e RPAR {: insertCode(binToHex("11111101") + binToHex("11001011") + getNum8Bits(e) +binToHex("00" + "000" + "110")); CL += 4; :}
+;
+rl::= ld1:e {: insertCode(binToHex("11001011") + binToHex("00" + "010" + e)); CL += 2; :}
+    | LPAR HL RPAR {: insertCode(binToHex("11001011") + binToHex("00" + "010" + "110")); CL += 2; :}
+    | LPAR IX MAS N:e RPAR {: insertCode(binToHex("11011101") + binToHex("11001011") + getNum8Bits(e) +binToHex("00" + "010" + "110")); CL += 4; :}
+    | LPAR IY MAS N:e RPAR {: insertCode(binToHex("11111101") + binToHex("11001011") + getNum8Bits(e) +binToHex("00" + "010" + "110")); CL += 4; :}
+;
+rrc::= ld1:e {: insertCode(binToHex("11001011") + binToHex("00" + "001" + e)); CL += 2; :}
+    | LPAR HL RPAR {: insertCode(binToHex("11001011") + binToHex("00" + "110" + "001")); CL += 2; :}
+    | LPAR IX MAS N:e RPAR {: insertCode(binToHex("11011101") + binToHex("11001011") + getNum8Bits(e) +binToHex("00" + "001" + "110")); CL += 4; :}
+    | LPAR IY MAS N:e RPAR {: insertCode(binToHex("11111101") + binToHex("11001011") + getNum8Bits(e) +binToHex("00" + "001" + "110")); CL += 4; :}
+;
+rr::= ld1:e {: insertCode(binToHex("11001011") + binToHex("00" + "011" + e)); CL += 2; :}
+    | LPAR HL RPAR {: insertCode(binToHex("11001011") + binToHex("00" + "011" + "001")); CL += 2; :}
+    | LPAR IX MAS N:e RPAR {: insertCode(binToHex("11011101") + binToHex("11001011") + getNum8Bits(e) +binToHex("00" + "011" + "110")); CL += 4; :}
+    | LPAR IY MAS N:e RPAR {: insertCode(binToHex("11111101") + binToHex("11001011") + getNum8Bits(e) +binToHex("00" + "011" + "110")); CL += 4; :}
+;
+sla::= ld1:e {: insertCode(binToHex("11001011") + binToHex("00" + "100" + e)); CL += 2; :}
+    | LPAR HL RPAR {: insertCode(binToHex("11001011") + binToHex("00" + "100" + "001")); CL += 2; :}
+    | LPAR IX MAS N:e RPAR {: insertCode(binToHex("11011101") + binToHex("11001011") + getNum8Bits(e) +binToHex("00" + "100" + "110")); CL += 4; :}
+    | LPAR IY MAS N:e RPAR {: insertCode(binToHex("11111101") + binToHex("11001011") + getNum8Bits(e) +binToHex("00" + "100" + "110")); CL += 4; :}
+;
+sra::= ld1:e {: insertCode(binToHex("11001011") + binToHex("00" + "101" + e)); CL += 2; :}
+    | LPAR HL RPAR {: insertCode(binToHex("11001011") + binToHex("00" + "101" + "001")); CL += 2; :}
+    | LPAR IX MAS N:e RPAR {: insertCode(binToHex("11011101") + binToHex("11001011") + getNum8Bits(e) +binToHex("00" + "101" + "110")); CL += 4; :}
+    | LPAR IY MAS N:e RPAR {: insertCode(binToHex("11111101") + binToHex("11001011") + getNum8Bits(e) +binToHex("00" + "101" + "110")); CL += 4; :}
+;
+srl::= ld1:e {: insertCode(binToHex("11001011") + binToHex("00" + "111" + e)); CL += 2; :}
+    | LPAR HL RPAR {: insertCode(binToHex("11001011") + binToHex("00" + "111" + "001")); CL += 2; :}
+    | LPAR IX MAS N:e RPAR {: insertCode(binToHex("11011101") + binToHex("11001011") + getNum8Bits(e) +binToHex("00" + "111" + "110")); CL += 4; :}
+    | LPAR IY MAS N:e RPAR {: insertCode(binToHex("11111101") + binToHex("11001011") + getNum8Bits(e) +binToHex("00" + "111" + "110")); CL += 4; :}
+;
+rld::= {: insertCode(binToHex("11101101") + binToHex("01101111")); CL += 2; :}
+;
+rrd::= {: insertCode(binToHex("11101101") + binToHex("01100111")); CL += 2; :}
+;
+ld::= BC COMA nn:e {: insertCode(binToHex("00000001") + getNum16Bits(e)); CL += 3; :}
+    | DE COMA nn:e {: insertCode(binToHex("00010001") + getNum16Bits(e)); CL += 3; :}
+    | HL COMA nn:e {: insertCode(binToHex("00100001") + getNum16Bits(e)); CL += 3; :}
+    | SP COMA nn:e {: insertCode(binToHex("00110001") + getNum16Bits(e)); CL += 3; :}
+    | LPAR IX COMA nn:e {: insertCode(binToHex("11011101") + binToHex("00100001") + getNum16Bits(e)); CL += 4; :}
+    | LPAR IY COMA nn:e {: insertCode(binToHex("11111101") + binToHex("00100001") + getNum16Bits(e)); CL += 4; :}
+    | BC COMA LPAR nn:e RPAR {: insertCode(binToHex("11101101") + binToHex("01001011") + getNum16Bits(e)); CL += 4; :}
+    | DE COMA LPAR nn:e RPAR {: insertCode(binToHex("11101101") + binToHex("01011011") + getNum16Bits(e)); CL += 4; :}
+    | HL COMA LPAR nn:e RPAR {: insertCode(binToHex("11101101") + binToHex("01101011") + getNum16Bits(e)); CL += 4; :}
+    | SP COMA LPAR nn:e RPAR {: insertCode(binToHex("11101101") + binToHex("01111011") + getNum16Bits(e)); CL += 4; :}
+    | LPAR IX COMA LPAR nn:e RPAR {: insertCode(binToHex("11011101") + binToHex("00101010") + getNum16Bits(e)); CL += 4; :}
+    | LPAR IY COMA LPAR nn:e RPAR {: insertCode(binToHex("11111101") + binToHex("00101010") + getNum16Bits(e)); CL += 4; :}
+    | LPAR nn:e RPAR BC {: insertCode(binToHex("11101101") + binToHex("00000011") + getNum16Bits(e)); CL += 4; :}
+    | LPAR nn:e RPAR DE {: insertCode(binToHex("11101101") + binToHex("00010011") + getNum16Bits(e)); CL += 4; :}
+    | LPAR nn:e RPAR HL {: insertCode(binToHex("11101101") + binToHex("00100011") + getNum16Bits(e)); CL += 4; :}
+    | LPAR nn:e RPAR SP {: insertCode(binToHex("11101101") + binToHex("00110011") + getNum16Bits(e)); CL += 4; :}
+    | LPAR nn:e RPAR COMA IX {: insertCode(binToHex("11011101") + binToHex("00100010") + getNum16Bits(e)); CL += 4; :}
+    | LPAR nn:e RPAR COMA IY {: insertCode(binToHex("11111101") + binToHex("00100010") + getNum16Bits(e)); CL += 4; :}
+    | SP COMA HL {: insertCode(binToHex("11111001")); CL += 1; :}
+    | SP COMA IX {: insertCode(binToHex("11011101") + binToHex("11111001")); CL += 2; :}
+    | SP COMA IY {: insertCode(binToHex("11111101") + binToHex("11111001")); CL += 2; :}
+;
+push::= BC {: insertCode(binToHex("11000101")); CL += 1; :}
+    | DE {: insertCode(binToHex("11010101")); CL += 1; :}
+    | HL {: insertCode(binToHex("11100101")); CL += 1; :}
+    | AF {: insertCode(binToHex("11110101")); CL += 1; :}
+    | IX {: insertCode(binToHex("11011101") + binToHex("11100101")); CL += 2; :}
+    | IY {: insertCode(binToHex("11111101") + binToHex("11100101")); CL += 2; :}
+;
+pop::= BC {: insertCode(binToHex("11000001")); CL += 1; :}
+    | DE {: insertCode(binToHex("11010001")); CL += 1; :}
+    | HL {: insertCode(binToHex("11100001")); CL += 1; :}
+    | AF {: insertCode(binToHex("11110001")); CL += 1; :}
+    | IX {: insertCode(binToHex("11011101") + binToHex("11100001")); CL += 2; :}
+    | IY {: insertCode(binToHex("11111101") + binToHex("11100001")); CL += 2; :}
+;
