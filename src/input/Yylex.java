@@ -34,15 +34,15 @@ public class Yylex implements java_cup.runtime.Scanner {
    * Translates characters to character classes
    */
   private static final char [] ZZ_CMAP = {
-     0,  0,  0,  0,  0,  0,  0,  0,  0, 18, 27, 27, 27, 27,  0,  0, 
+     0,  0,  0,  0,  0,  0,  0,  0,  0, 13, 17, 17, 17, 17,  0,  0, 
      0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 
-    18,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 17,  6,  0, 
+    13,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 12,  5,  0, 
      3,  4,  4,  4,  4,  4,  4,  4,  2,  4,  0,  0,  0,  0,  0,  0, 
-     0, 11, 23, 23, 23, 26, 23, 23, 19, 23, 23, 23, 21, 15, 23, 23, 
-    23, 23, 23, 24,  7, 23, 23, 23,  9, 23,  1,  0,  0,  0,  0,  4, 
-     0, 12,  4,  4,  4, 25,  4,  4, 20,  4,  4,  4, 22, 16,  4,  4, 
-     4,  4,  4, 14,  8,  4,  4,  4, 10,  4,  5,  0,  0,  0,  0,  0, 
-     0,  0,  0,  0,  0, 27,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 
+     0,  8,  4,  4,  4, 16,  4,  4, 14,  4,  4,  4, 15, 11,  4,  4, 
+     4,  4,  4, 10,  6,  4,  4,  4,  7,  4,  1,  0,  0,  0,  0,  4, 
+     0,  8,  4,  4,  4, 16,  4,  4, 14,  4,  4,  4, 15, 11,  4,  4, 
+     4,  4,  4, 10,  6,  4,  4,  4,  7,  4,  1,  0,  0,  0,  0,  0, 
+     0,  0,  0,  0,  0, 17,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 
      0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 
      0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 
      0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 
@@ -58,12 +58,11 @@ public class Yylex implements java_cup.runtime.Scanner {
   private static final int [] ZZ_ACTION = zzUnpackAction();
 
   private static final String ZZ_ACTION_PACKED_0 =
-    "\1\0\1\1\3\2\1\1\1\2\1\1\1\3\1\2"+
-    "\1\0\1\2\3\0\1\4\1\5\1\6\2\0\1\6"+
-    "\4\0\1\3\1\7";
+    "\1\0\1\1\2\2\2\1\1\3\1\2\4\0\1\4"+
+    "\1\5\1\6\6\0\1\3\1\7";
 
   private static int [] zzUnpackAction() {
-    int [] result = new int[27];
+    int [] result = new int[23];
     int offset = 0;
     offset = zzUnpackAction(ZZ_ACTION_PACKED_0, offset, result);
     return result;
@@ -88,13 +87,12 @@ public class Yylex implements java_cup.runtime.Scanner {
   private static final int [] ZZ_ROWMAP = zzUnpackRowMap();
 
   private static final String ZZ_ROWMAP_PACKED_0 =
-    "\0\0\0\34\0\70\0\124\0\160\0\214\0\250\0\304"+
-    "\0\340\0\374\0\u0118\0\u0134\0\u0150\0\u016c\0\304\0\34"+
-    "\0\34\0\250\0\u0188\0\u01a4\0\124\0\u01c0\0\u01dc\0\u01f8"+
-    "\0\u0214\0\34\0\34";
+    "\0\0\0\22\0\44\0\66\0\110\0\132\0\154\0\176"+
+    "\0\220\0\242\0\264\0\132\0\22\0\22\0\66\0\306"+
+    "\0\330\0\352\0\374\0\u010e\0\u0120\0\22\0\22";
 
   private static int [] zzUnpackRowMap() {
-    int [] result = new int[27];
+    int [] result = new int[23];
     int offset = 0;
     offset = zzUnpackRowMap(ZZ_ROWMAP_PACKED_0, offset, result);
     return result;
@@ -117,29 +115,18 @@ public class Yylex implements java_cup.runtime.Scanner {
   private static final int [] ZZ_TRANS = zzUnpackTrans();
 
   private static final String ZZ_TRANS_PACKED_0 =
-    "\1\2\1\3\3\4\1\5\1\6\1\7\1\4\1\7"+
-    "\1\4\1\7\1\4\1\2\1\4\1\7\1\4\1\10"+
-    "\1\11\1\7\1\4\1\7\1\4\2\7\1\4\1\7"+
-    "\36\0\1\7\1\12\3\7\1\0\6\7\1\0\3\7"+
-    "\2\0\10\7\2\0\1\7\4\4\1\13\1\7\1\4"+
-    "\1\7\1\4\1\7\1\4\1\0\1\4\1\7\1\4"+
-    "\2\0\1\7\1\4\1\7\1\4\2\7\1\4\1\7"+
-    "\2\0\1\7\1\14\3\4\1\13\1\7\1\4\1\7"+
-    "\1\4\1\7\1\4\1\0\1\4\1\7\1\4\2\0"+
-    "\1\7\1\4\1\7\1\4\2\7\1\4\1\7\24\0"+
-    "\2\15\2\16\6\0\5\7\1\0\6\7\1\0\3\7"+
-    "\2\0\10\7\23\0\1\17\2\20\2\21\27\0\1\11"+
-    "\12\0\2\7\1\22\2\7\1\0\6\7\1\0\3\7"+
-    "\2\0\10\7\10\0\2\23\2\0\2\24\20\0\1\7"+
-    "\1\4\1\25\2\4\1\13\1\7\1\4\1\7\1\4"+
-    "\1\7\1\4\1\0\1\4\1\7\1\4\2\0\1\7"+
-    "\1\4\1\7\1\4\2\7\1\4\1\7\32\0\2\26"+
-    "\16\0\2\27\11\0\1\27\14\0\2\30\36\0\2\31"+
-    "\11\0\1\31\14\0\2\32\30\0\2\32\32\0\2\33"+
-    "\42\0\2\33\13\0";
+    "\1\2\1\3\3\4\1\5\3\4\1\2\2\4\1\6"+
+    "\1\7\3\4\24\0\1\4\1\10\2\4\1\11\3\4"+
+    "\1\0\2\4\2\0\3\4\2\0\4\4\1\11\3\4"+
+    "\1\0\2\4\2\0\3\4\17\0\1\12\1\13\17\0"+
+    "\1\14\1\15\1\16\17\0\1\7\5\0\2\4\1\17"+
+    "\1\4\1\11\3\4\1\0\2\4\2\0\3\4\7\0"+
+    "\1\20\1\0\1\21\31\0\1\22\12\0\2\23\16\0"+
+    "\1\24\23\0\2\25\16\0\1\26\20\0\1\26\21\0"+
+    "\1\27\26\0\1\27\6\0";
 
   private static int [] zzUnpackTrans() {
-    int [] result = new int[560];
+    int [] result = new int[306];
     int offset = 0;
     offset = zzUnpackTrans(ZZ_TRANS_PACKED_0, offset, result);
     return result;
@@ -177,11 +164,10 @@ public class Yylex implements java_cup.runtime.Scanner {
   private static final int [] ZZ_ATTRIBUTE = zzUnpackAttribute();
 
   private static final String ZZ_ATTRIBUTE_PACKED_0 =
-    "\1\0\1\11\10\1\1\0\1\1\3\0\2\11\1\1"+
-    "\2\0\1\1\4\0\2\11";
+    "\1\0\1\11\6\1\4\0\2\11\1\1\6\0\2\11";
 
   private static int [] zzUnpackAttribute() {
-    int [] result = new int[27];
+    int [] result = new int[23];
     int offset = 0;
     offset = zzUnpackAttribute(ZZ_ATTRIBUTE_PACKED_0, offset, result);
     return result;

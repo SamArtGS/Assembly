@@ -30,7 +30,7 @@ public class Codigo {
 
     @Override
     public String toString() {
-        return dir + " " + codigo + "\t" + linea;
+        return dir + " " + codigo + "\t\t" + linea;
     }
     
 }

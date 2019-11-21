@@ -14,7 +14,7 @@ import java_cup.runtime.*;
 
 %%
 "z80" { return new Symbol(sym.z80, new String (yytext())); }
-[a-z0-9_]+"."("txt"|"asm") {return new Symbol(sym.file, new String (yytext())); }
+[a-zA-Z0-9_]+"."("txt"|"asm"|"TXT"|"ASM") {return new Symbol(sym.file, new String (yytext())); }
 "-"[ \t]*"H" { return new Symbol(sym.H, new String (yytext())); }
 "-"[ \t]*"L" { return new Symbol(sym.L, new String (yytext())); }
 [a-zA-Z0-9_]+ { return new Symbol(sym.nombre, new String (yytext())); }

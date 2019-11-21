@@ -77,9 +77,9 @@ eofval: especifica un valor de retorno al final del archivo
 "CPIR" {return symbol(sym.EI, new String (yytext()));}
 "CPD" {return symbol(sym.EI, new String (yytext()));}
 "CPDR" {return symbol(sym.EI, new String (yytext()));}
-"IM"[ \t]*"0" {return symbol(sym.IM0, new String (yytext()));}
-"IM"[ \t]*"1" {return symbol(sym.IM1, new String (yytext()));}
-"IM"[ \t]*"2" {return symbol(sym.IM2, new String (yytext()));}
+"IM"[ \t]?"0" {return symbol(sym.IM0, new String (yytext()));}
+"IM"[ \t]?"1" {return symbol(sym.IM1, new String (yytext()));}
+"IM"[ \t]?"2" {return symbol(sym.IM2, new String (yytext()));}
 "CALL" {return symbol(sym.CALL, new String (yytext()));}
 "RLCA" {return symbol(sym.RLCA, new String (yytext()));}
 "RLA" {return symbol(sym.RLA, new String (yytext()));}
